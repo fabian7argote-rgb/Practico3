@@ -2,7 +2,6 @@ package com.example.mypractico3.data.dao
 
 import androidx.room.*
 import com.example.mypractico3.data.entity.TareaEntity
-import com.example.mypractico3.data.entity.TareaEtiquetaEntity
 import com.example.mypractico3.data.relation.TareaConEtiquetas
 import kotlinx.coroutines.flow.Flow
 

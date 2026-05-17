@@ -50,6 +50,7 @@ class MainActivity : ComponentActivity() {
                 "lista" -> {
                     ListaTareasScreen(
                         viewModel = tareaViewModel,
+                        etiquetaViewModel = etiquetaViewModel,
                         onNuevaTarea = {
                             tareaSeleccionada = null
                             pantallaActual = "crear"

@@ -22,12 +22,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.mypractico3.data.relation.TareaConEtiquetas
+import com.example.mypractico3.ui.theme.viewmodel.EtiquetaViewModel
 import com.example.mypractico3.ui.theme.viewmodel.TareaViewModel
+
 
 
 @Composable
 fun ListaTareasScreen(
     viewModel: TareaViewModel,
+    etiquetaViewModel: EtiquetaViewModel,
     onNuevaTarea: () -> Unit,
     onEditarTarea: (TareaConEtiquetas) -> Unit,
     onDetalleTarea: (TareaConEtiquetas) -> Unit,
@@ -38,6 +41,8 @@ fun ListaTareasScreen(
     val estado by viewModel.filtroEstado.collectAsState()
     val prioridad by viewModel.filtroPrioridad.collectAsState()
     val orden by viewModel.orden.collectAsState()
+    val filtroEtiqueta by viewModel.filtroEtiqueta.collectAsState()
+    val etiquetas by etiquetaViewModel.etiquetas.collectAsState()
 
     Column(
         modifier = Modifier.padding(16.dp)
@@ -88,6 +93,16 @@ fun ListaTareasScreen(
             onSeleccionar = { viewModel.cambiarFiltroPrioridad(it) }
         )
 
+        Spacer(modifier = Modifier.height(6.dp))
+
+        SelectorSimple(
+            titulo = "Etiqueta",
+            valor = filtroEtiqueta,
+            opciones = listOf("Todas") + etiquetas.map { it.nombre },
+            onSeleccionar = {
+                viewModel.cambiarFiltroEtiqueta(it)
+            }
+        )
         Spacer(modifier = Modifier.height(6.dp))
 
         SelectorSimple(
