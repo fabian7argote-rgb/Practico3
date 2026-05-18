@@ -1,18 +1,25 @@
 package com.example.mypractico3.ui.theme.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.mypractico3.data.entity.EtiquetaEntity
 import com.example.mypractico3.data.entity.TareaEntity
 import com.example.mypractico3.ui.theme.viewmodel.EtiquetaViewModel
 import com.example.mypractico3.ui.theme.viewmodel.TareaViewModel
+import java.util.Calendar
 
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun CrearEditarTareaScreen(
     tareaEditar: TareaEntity?,
@@ -35,133 +42,123 @@ fun CrearEditarTareaScreen(
         }
     }
 
-    Column(
-        modifier = Modifier.padding(16.dp)
-    ) {
-        Text(
-            text = if (tareaEditar == null) "Crear tarea" else "Editar tarea",
-            style = MaterialTheme.typography.headlineMedium
-        )
+    val datePickerState = rememberDatePickerState()
+    var showDatePicker by remember { mutableStateOf(false) }
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = titulo,
-            onValueChange = {
-                titulo = it
-                errorTitulo = false
-            },
-            label = { Text("Título obligatorio") },
-            isError = errorTitulo,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        if (errorTitulo) {
-            Text(
-                text = "El título es obligatorio",
-                color = MaterialTheme.colorScheme.error
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = descripcion,
-            onValueChange = { descripcion = it },
-            label = { Text("Descripción") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = fecha,
-            onValueChange = { fecha = it },
-            label = { Text("Fecha vencimiento Ej: 2026-05-20") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        SelectorSimple(
-            titulo = "Prioridad",
-            valor = prioridad,
-            opciones = listOf("Alta", "Media", "Baja"),
-            onSeleccionar = { prioridad = it }
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text("Etiquetas")
-
-        LazyColumn(
-            modifier = Modifier.height(150.dp)
-        ) {
-            items(
-                items = etiquetasDisponibles,
-                key = { etiqueta -> etiqueta.id }
-            ) { etiqueta ->
-
-                Row(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Checkbox(
-                        checked = seleccionadas.contains(etiqueta.id),
-                        onCheckedChange = { checked ->
-                            if (checked) {
-                                seleccionadas.add(etiqueta.id)
-                            } else {
-                                seleccionadas.remove(etiqueta.id)
-                            }
-                        }
-                    )
-
-                    Text(
-                        text = etiqueta.nombre,
-                        modifier = Modifier.padding(top = 12.dp)
-                    )
-                }
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let {
+                        val calendar = Calendar.getInstance().apply { timeInMillis = it }
+                        fecha = "${calendar.get(Calendar.YEAR)}-${String.format("%02d", calendar.get(Calendar.MONTH) + 1)}-${String.format("%02d", calendar.get(Calendar.DAY_OF_MONTH))}"
+                    }
+                    showDatePicker = false
+                }) { Text("OK") }
             }
+        ) {
+            DatePicker(state = datePickerState)
         }
+    }
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Row {
-            Button(
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(if (tareaEditar == null) "Nueva Tarea" else "Editar Tarea", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onVolver) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                    }
+                }
+            )
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
                 onClick = {
                     if (titulo.isBlank()) {
                         errorTitulo = true
                     } else {
                         if (tareaEditar == null) {
-                            tareaViewModel.guardarTarea(
-                                titulo = titulo,
-                                descripcion = descripcion,
-                                fechaVencimiento = fecha,
-                                prioridad = prioridad,
-                                etiquetasSeleccionadas = seleccionadas.toList()
-                            )
+                            tareaViewModel.guardarTarea(titulo, descripcion, fecha, prioridad, seleccionadas.toList())
                         } else {
-                            tareaViewModel.actualizarTarea(
-                                tarea = tareaEditar,
-                                titulo = titulo,
-                                descripcion = descripcion,
-                                fechaVencimiento = fecha,
-                                prioridad = prioridad,
-                                etiquetasSeleccionadas = seleccionadas.toList()
-                            )
+                            tareaViewModel.actualizarTarea(tareaEditar, titulo, descripcion, fecha, prioridad, seleccionadas.toList())
                         }
-
                         onVolver()
                     }
+                },
+                icon = { Icon(Icons.Default.Check, null) },
+                text = { Text("Guardar") }
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            OutlinedTextField(
+                value = titulo,
+                onValueChange = { titulo = it; errorTitulo = false },
+                label = { Text("Título (Obligatorio)") },
+                isError = errorTitulo,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            OutlinedTextField(
+                value = descripcion,
+                onValueChange = { descripcion = it },
+                label = { Text("Descripción (Opcional)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = fecha,
+                onValueChange = { },
+                label = { Text("Fecha de vencimiento") },
+                modifier = Modifier.fillMaxWidth(),
+                readOnly = true,
+                trailingIcon = {
+                    IconButton(onClick = { showDatePicker = true }) {
+                        Icon(Icons.Default.CalendarMonth, null)
+                    }
                 }
-            ) {
-                Text("Guardar")
+            )
+
+            // Selector de Prioridad Optimizado
+            Text("Prioridad", style = MaterialTheme.typography.titleSmall)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("Baja", "Media", "Alta").forEach { p ->
+                    FilterChip(
+                        selected = prioridad == p,
+                        onClick = { prioridad = p },
+                        label = { Text(p) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Button(onClick = onVolver) {
-                Text("Cancelar")
+            // Gestión de Etiquetas Optimizada
+            Text("Etiquetas", style = MaterialTheme.typography.titleSmall)
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                etiquetasDisponibles.forEach { etiqueta ->
+                    FilterChip(
+                        selected = seleccionadas.contains(etiqueta.id),
+                        onClick = {
+                            if (seleccionadas.contains(etiqueta.id)) seleccionadas.remove(etiqueta.id)
+                            else seleccionadas.add(etiqueta.id)
+                        },
+                        label = { Text(etiqueta.nombre) }
+                    )
+                }
             }
         }
     }

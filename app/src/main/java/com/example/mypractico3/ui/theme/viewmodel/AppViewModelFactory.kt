@@ -10,15 +10,10 @@ class AppViewModelFactory(
 ) : ViewModelProvider.Factory {
 
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-
-        if (modelClass.isAssignableFrom(TareaViewModel::class.java)) {
-            return TareaViewModel(repository) as T
+        return when {
+            modelClass.isAssignableFrom(TareaViewModel::class.java) -> TareaViewModel(repository) as T
+            modelClass.isAssignableFrom(EtiquetaViewModel::class.java) -> EtiquetaViewModel(repository) as T
+            else -> throw IllegalArgumentException("ViewModel desconocido")
         }
-
-        if (modelClass.isAssignableFrom(EtiquetaViewModel::class.java)) {
-            return EtiquetaViewModel(repository) as T
-        }
-
-        throw IllegalArgumentException("ViewModel desconocido")
     }
 }

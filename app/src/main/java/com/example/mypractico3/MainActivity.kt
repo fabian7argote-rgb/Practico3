@@ -3,16 +3,15 @@ package com.example.mypractico3
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.example.mypractico3.data.AppDatabase
-import com.example.mypractico3.data.relation.TareaConEtiquetas
 import com.example.mypractico3.data.repository.TareaRepository
-import com.example.mypractico3.ui.theme.screens.CrearEditarTareaScreen
-import com.example.mypractico3.ui.theme.screens.DetalleTareaScreen
-import com.example.mypractico3.ui.theme.screens.EtiquetasScreen
-import com.example.mypractico3.ui.theme.screens.ListaTareasScreen
+import com.example.mypractico3.ui.theme.screens.*
 import com.example.mypractico3.ui.theme.viewmodel.AppViewModelFactory
 import com.example.mypractico3.ui.theme.viewmodel.EtiquetaViewModel
 import com.example.mypractico3.ui.theme.viewmodel.TareaViewModel
@@ -21,98 +20,48 @@ import com.example.mypractico3.ui.theme.viewmodel.TareaViewModel
 
 
 class MainActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         val database = AppDatabase.obtenerDatabase(this)
-
-        val repository = TareaRepository(
-            tareaDao = database.tareaDao(),
-            etiquetaDao = database.etiquetaDao()
-        )
-
+        val repository = TareaRepository(database.tareaDao(), database.etiquetaDao())
         val factory = AppViewModelFactory(repository)
 
         setContent {
-            val tareaViewModel: TareaViewModel = viewModel(factory = factory)
-            val etiquetaViewModel: EtiquetaViewModel = viewModel(factory = factory)
+            val navController = rememberNavController()
+            val tareaVM: TareaViewModel = viewModel(factory = factory)
+            val etiquetaVM: EtiquetaViewModel = viewModel(factory = factory)
+            val tareas by tareaVM.tareas.collectAsState()
 
-            var pantallaActual by androidx.compose.runtime.remember {
-                androidx.compose.runtime.mutableStateOf("lista")
-            }
-
-            var tareaSeleccionada by androidx.compose.runtime.remember {
-                androidx.compose.runtime.mutableStateOf<TareaConEtiquetas?>(null)
-            }
-
-            when (pantallaActual) {
-                "lista" -> {
+            NavHost(navController = navController, startDestination = "lista") {
+                composable("lista") {
                     ListaTareasScreen(
-                        viewModel = tareaViewModel,
-                        etiquetaViewModel = etiquetaViewModel,
-                        onNuevaTarea = {
-                            tareaSeleccionada = null
-                            pantallaActual = "crear"
-                        },
-                        onEditarTarea = { tarea ->
-                            tareaSeleccionada = tarea
-                            pantallaActual = "editar"
-                        },
-                        onDetalleTarea = { tarea ->
-                            tareaSeleccionada = tarea
-                            pantallaActual = "detalle"
-                        },
-                        onEtiquetas = {
-                            pantallaActual = "etiquetas"
-                        }
+                        viewModel = tareaVM,
+                        etiquetaViewModel = etiquetaVM,
+                        onNuevaTarea = { navController.navigate("crear") },
+                        onEditarTarea = { navController.navigate("editar/${it.tarea.id}") },
+                        onDetalleTarea = { navController.navigate("detalle/${it.tarea.id}") },
+                        onEtiquetas = { navController.navigate("etiquetas") }
                     )
                 }
-
-                "crear" -> {
-                    CrearEditarTareaScreen(
-                        tareaEditar = null,
-                        etiquetasActuales = emptyList(),
-                        tareaViewModel = tareaViewModel,
-                        etiquetaViewModel = etiquetaViewModel,
-                        onVolver = {
-                            pantallaActual = "lista"
-                        }
-                    )
+                composable("crear") {
+                    CrearEditarTareaScreen(null, emptyList(), tareaVM, etiquetaVM) { navController.popBackStack() }
                 }
-
-                "editar" -> {
-                    tareaSeleccionada?.let { tarea ->
-                        CrearEditarTareaScreen(
-                            tareaEditar = tarea.tarea,
-                            etiquetasActuales = tarea.etiquetas,
-                            tareaViewModel = tareaViewModel,
-                            etiquetaViewModel = etiquetaViewModel,
-                            onVolver = {
-                                pantallaActual = "lista"
-                            }
-                        )
+                composable("editar/{id}") { backStackEntry ->
+                    val id = backStackEntry.arguments?.getString("id")?.toIntOrNull()
+                    val item = tareas.find { it.tarea.id == id }
+                    item?.let {
+                        CrearEditarTareaScreen(it.tarea, it.etiquetas, tareaVM, etiquetaVM) { navController.popBackStack() }
                     }
                 }
-
-                "detalle" -> {
-                    tareaSeleccionada?.let { tarea ->
-                        DetalleTareaScreen(
-                            tareaConEtiquetas = tarea,
-                            onVolver = {
-                                pantallaActual = "lista"
-                            }
-                        )
+                composable("detalle/{id}") { backStackEntry ->
+                    val id = backStackEntry.arguments?.getString("id")?.toIntOrNull()
+                    val item = tareas.find { it.tarea.id == id }
+                    item?.let {
+                        DetalleTareaScreen(it) { navController.popBackStack() }
                     }
                 }
-
-                "etiquetas" -> {
-                    EtiquetasScreen(
-                        viewModel = etiquetaViewModel,
-                        onVolver = {
-                            pantallaActual = "lista"
-                        }
-                    )
+                composable("etiquetas") {
+                    EtiquetasScreen(etiquetaVM) { navController.popBackStack() }
                 }
             }
         }

@@ -19,6 +19,9 @@ interface EtiquetaDao {
     suspend fun eliminarEtiqueta(etiqueta: EtiquetaEntity)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun asociarEtiquetas(relaciones: List<TareaEtiquetaEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun asociarEtiqueta(relacion: TareaEtiquetaEntity)
 
     @Query("DELETE FROM tarea_etiqueta WHERE tareaId = :tareaId")

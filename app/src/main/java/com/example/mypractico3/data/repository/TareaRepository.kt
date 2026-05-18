@@ -14,60 +14,34 @@ class TareaRepository(
     val tareas = tareaDao.obtenerTareasConEtiquetas()
     val etiquetas = etiquetaDao.obtenerEtiquetas()
 
-    suspend fun insertarTarea(
-        tarea: TareaEntity,
-        etiquetasSeleccionadas: List<Int>
-    ) {
+    suspend fun insertarTarea(tarea: TareaEntity, etiquetasSeleccionadas: List<Int>) {
         val tareaId = tareaDao.insertarTarea(tarea).toInt()
-
-        etiquetasSeleccionadas.forEach { etiquetaId ->
-            etiquetaDao.asociarEtiqueta(
-                TareaEtiquetaEntity(
-                    tareaId = tareaId,
-                    etiquetaId = etiquetaId
-                )
-            )
-        }
+        asociarEtiquetas(tareaId, etiquetasSeleccionadas)
     }
 
-    suspend fun actualizarTarea(
-        tarea: TareaEntity,
-        etiquetasSeleccionadas: List<Int>
-    ) {
+    suspend fun actualizarTarea(tarea: TareaEntity, etiquetasSeleccionadas: List<Int>) {
         tareaDao.actualizarTarea(tarea)
-
         etiquetaDao.eliminarRelacionesDeTarea(tarea.id)
+        asociarEtiquetas(tarea.id, etiquetasSeleccionadas)
+    }
 
-        etiquetasSeleccionadas.forEach { etiquetaId ->
-            etiquetaDao.asociarEtiqueta(
-                TareaEtiquetaEntity(
-                    tareaId = tarea.id,
-                    etiquetaId = etiquetaId
-                )
-            )
+    private suspend fun asociarEtiquetas(tareaId: Int, etiquetasIds: List<Int>) {
+        if (etiquetasIds.isNotEmpty()) {
+            val relaciones = etiquetasIds.map { TareaEtiquetaEntity(tareaId, it) }
+            etiquetaDao.asociarEtiquetas(relaciones)
         }
     }
 
     suspend fun eliminarTarea(tarea: TareaEntity) {
-        etiquetaDao.eliminarRelacionesDeTarea(tarea.id)
+        // La eliminación de relaciones es automática por CASCADE en la base de datos,
+        // pero lo mantenemos si queremos ser explícitos o si no confiamos en el esquema.
+        // Dado que TareaEtiquetaEntity tiene onDelete = CASCADE, no es estrictamente necesario.
         tareaDao.eliminarTarea(tarea)
     }
 
-    suspend fun cambiarEstado(
-        id: Int,
-        completada: Boolean
-    ) {
-        tareaDao.cambiarEstado(id, completada)
-    }
+    suspend fun cambiarEstado(id: Int, completada: Boolean) = tareaDao.cambiarEstado(id, completada)
 
-    suspend fun insertarEtiqueta(nombre: String) {
-        etiquetaDao.insertarEtiqueta(
-            EtiquetaEntity(nombre = nombre)
-        )
-    }
+    suspend fun insertarEtiqueta(nombre: String) = etiquetaDao.insertarEtiqueta(EtiquetaEntity(nombre = nombre))
 
-    suspend fun eliminarEtiqueta(etiqueta: EtiquetaEntity) {
-        etiquetaDao.eliminarRelacionesDeEtiqueta(etiqueta.id)
-        etiquetaDao.eliminarEtiqueta(etiqueta)
-    }
+    suspend fun eliminarEtiqueta(etiqueta: EtiquetaEntity) = etiquetaDao.eliminarEtiqueta(etiqueta)
 }
